@@ -1,0 +1,9 @@
+{
+  "name": "Lumina Capture",
+  "description": "A professional-grade camera and audio recording suite with background capabilities and integrated media management.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "display-capture"
+  ]
+}
