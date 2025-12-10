@@ -27,7 +27,8 @@ import {
   Save,
   Volume2,
   VolumeX,
-  Share2
+  Share2,
+  Home
 } from 'lucide-react';
 
 export const Icons = {
@@ -58,5 +59,6 @@ export const Icons = {
   Save,
   Volume: Volume2,
   Mute: VolumeX,
-  Share: Share2
+  Share: Share2,
+  Home
 };

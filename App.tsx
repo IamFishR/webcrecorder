@@ -304,17 +304,6 @@ const App: React.FC = () => {
           {/* --- Viewfinder Area --- */}
           <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-300">
             
-            {/* Back to Home Button */}
-            {!isRecording && (
-              <button 
-                onClick={handleBackToHome}
-                className="absolute top-6 left-6 p-3 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/10 hover:bg-white/20 transition-all z-20 group"
-                title="Back to Home"
-              >
-                <Icons.Back className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
-              </button>
-            )}
-
             {/* Permission Error State */}
             {!permissionGranted && error && mode !== 'screen' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-50 p-6 text-center">
@@ -390,9 +379,9 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {/* Recording Indicator */}
+            {/* Recording Indicator (DARK MODE) */}
             {isRecording && (
-              <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-red-500/10 backdrop-blur-md border border-red-500/20 px-4 py-1.5 rounded-full z-20">
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-xl border border-white/10 px-4 py-1.5 rounded-full z-20">
                 <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
                 <span className="font-mono font-bold text-white tracking-widest text-sm shadow-black drop-shadow-md">
                   {formatTime(recordingTime)}
@@ -416,6 +405,15 @@ const App: React.FC = () => {
             <div className="bg-black/60 backdrop-blur-xl rounded-full border border-white/10 p-3 shadow-2xl">
               <div className="flex items-center justify-between gap-4">
                 
+                {/* Home Button */}
+                <button 
+                  onClick={handleBackToHome}
+                  className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 shrink-0"
+                  title="Home"
+                >
+                  <Icons.Home className="w-5 h-5 text-gray-400 hover:text-white" />
+                </button>
+
                 {/* Gallery Button */}
                 <button 
                   onClick={() => setShowGallery(!showGallery)}
@@ -427,34 +425,6 @@ const App: React.FC = () => {
                       <Icons.Gallery className="w-5 h-5 text-gray-400 group-hover:text-white" />
                   )}
                 </button>
-
-                {/* Mode Switcher (Pill) */}
-                <div className="flex bg-white/5 rounded-full p-1 border border-white/5 shrink-0 hidden md:flex">
-                  {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
-                    <button 
-                      key={m}
-                      onClick={() => switchMode(m)}
-                      className={`
-                        w-10 h-8 flex items-center justify-center rounded-full transition-all
-                        ${mode === m ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}
-                      `}
-                      title={m.charAt(0).toUpperCase() + m.slice(1)}
-                    >
-                      {m === 'video' && <Icons.Video className="w-4 h-4" />}
-                      {m === 'audio' && <Icons.Mic className="w-4 h-4" />}
-                      {m === 'screen' && <Icons.Screen className="w-4 h-4" />}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Mobile Mode Switcher */}
-                <div className="md:hidden">
-                  <button className="w-10 h-8 bg-white text-black rounded-full flex items-center justify-center">
-                      {mode === 'video' && <Icons.Video className="w-4 h-4" />}
-                      {mode === 'audio' && <Icons.Mic className="w-4 h-4" />}
-                      {mode === 'screen' && <Icons.Screen className="w-4 h-4" />}
-                  </button>
-                </div>
 
                 {/* Shutter Button */}
                 <div className="relative group shrink-0">
@@ -498,7 +468,7 @@ const App: React.FC = () => {
                     <button onClick={() => setShowSettings(false)}><Icons.Close className="w-4 h-4 text-gray-400" /></button>
                 </div>
                 <div className="space-y-3">
-                    <div className="md:hidden flex gap-2 mb-4 bg-black/20 p-2 rounded-lg justify-center">
+                    <div className="flex gap-2 mb-4 bg-black/20 p-2 rounded-lg justify-center">
                         {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
                             <button 
                               key={m}
@@ -579,11 +549,11 @@ const App: React.FC = () => {
                 <p>No recordings yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {recordedMedia.map(item => (
                   <div 
                     key={item.id} 
-                    className="relative group aspect-[9/16] rounded-lg overflow-hidden bg-zinc-900 border border-white/5 hover:border-primary/50 cursor-pointer transition-all"
+                    className="relative group aspect-[9/16] rounded-xl overflow-hidden bg-zinc-900 border border-white/10 hover:border-white/30 cursor-pointer transition-all shadow-lg"
                     onClick={() => setSelectedMediaId(item.id)}
                     onMouseEnter={(e) => {
                         const v = e.currentTarget.querySelector('video');
@@ -595,39 +565,39 @@ const App: React.FC = () => {
                     }}
                   >
                     {item.type === 'audio' ? (
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        <Icons.Audio className="w-8 h-8 text-gray-600 mb-2" />
-                        <div className="w-8 h-1 bg-gray-800 rounded-full" />
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800">
+                        <Icons.Audio className="w-8 h-8 text-gray-400 mb-2" />
                       </div>
                     ) : (
                       <video 
                         src={item.url} 
-                        className="w-full h-full object-cover" 
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
                         muted 
                         playsInline
                         loop
+                        preload="metadata"
                       />
                     )}
                     
-                    {/* Overlay Options */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 pointer-events-none">
-                      <div className="flex justify-end gap-1 pointer-events-auto">
+                    {/* Always visible info gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex flex-col justify-end p-3">
+                      <div className="flex items-center justify-between gap-2">
+                         <div className="overflow-hidden">
+                             <p className="text-xs font-bold text-white truncate">{item.name}</p>
+                             <p className="text-[10px] text-gray-400 font-mono">{formatTime(item.duration)}</p>
+                         </div>
                          <button 
                             onClick={(e) => downloadMedia(item, e)}
-                            className="p-1.5 bg-white/10 rounded-full hover:bg-white text-white hover:text-black transition-colors"
+                            className="p-1.5 bg-white/10 hover:bg-white rounded-full text-white hover:text-black transition-colors shrink-0"
+                            title="Download"
                          >
                             <Icons.Download className="w-3 h-3" />
                          </button>
                       </div>
-                      
-                      <div>
-                        <p className="text-[10px] font-bold text-white truncate">{item.name}</p>
-                        <p className="text-[9px] text-gray-400">{formatTime(item.duration)}</p>
-                      </div>
                     </div>
 
                     {/* Type Badge */}
-                    <div className="absolute top-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase text-white backdrop-blur-sm">
+                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm rounded px-1.5 py-0.5 text-[8px] font-bold uppercase text-white/80 border border-white/10">
                       {item.type}
                     </div>
                   </div>
