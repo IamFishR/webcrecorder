@@ -462,13 +462,15 @@ const App: React.FC = () => {
 
             {/* Settings Panel Popover */}
             {showSettings && (
-              <div className="absolute bottom-full left-0 right-0 mb-4 bg-surface/95 backdrop-blur-xl rounded-2xl border border-white/10 p-4 animate-in slide-in-from-bottom-2 shadow-2xl">
+              <div className="absolute bottom-full left-0 right-0 mb-4 bg-surface/95 backdrop-blur-xl rounded-2xl border border-white/10 p-4 animate-in slide-in-from-bottom-2 shadow-2xl w-full max-w-sm mx-auto">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</h3>
                     <button onClick={() => setShowSettings(false)}><Icons.Close className="w-4 h-4 text-gray-400" /></button>
                 </div>
-                <div className="space-y-3">
-                    <div className="flex gap-2 mb-4 bg-black/20 p-2 rounded-lg justify-center">
+                
+                <div className="space-y-4">
+                    {/* Mode Switcher (Mobile) */}
+                    <div className="flex gap-2 bg-black/20 p-2 rounded-lg justify-center md:hidden">
                         {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
                             <button 
                               key={m}
@@ -483,26 +485,55 @@ const App: React.FC = () => {
                           ))}
                     </div>
 
-                    <select 
-                      className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
-                      value={constraints.videoDeviceId}
-                      onChange={(e) => { setConstraints({...constraints, videoDeviceId: e.target.value}); if(mode!=='screen') startStream(); }}
-                    >
-                      <option value="">Default Camera</option>
-                      {devices.filter(d => d.kind === 'videoinput').map(d => (
-                        <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-                      ))}
-                    </select>
-                    <select 
-                      className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
-                      value={constraints.audioDeviceId}
-                      onChange={(e) => { setConstraints({...constraints, audioDeviceId: e.target.value}); if(mode!=='screen') startStream(); }}
-                    >
-                      <option value="">Default Mic</option>
-                      {devices.filter(d => d.kind === 'audioinput').map(d => (
-                        <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-                      ))}
-                    </select>
+                    {/* Video Quality (Only in Video Mode) */}
+                    {mode === 'video' && (
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Video Quality</label>
+                            <select 
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-white/30 transition-colors"
+                              value={constraints.resolution || '1080p'}
+                              onChange={(e) => {
+                                 setConstraints({...constraints, resolution: e.target.value as any}); 
+                              }}
+                            >
+                              <option value="720p">720p (HD)</option>
+                              <option value="1080p">1080p (Full HD)</option>
+                              <option value="4k">4K (Ultra HD)</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Camera Select */}
+                    {mode !== 'audio' && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Camera</label>
+                        <select 
+                          className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-white/30 transition-colors"
+                          value={constraints.videoDeviceId}
+                          onChange={(e) => { setConstraints({...constraints, videoDeviceId: e.target.value}); }}
+                        >
+                          <option value="">Default Camera</option>
+                          {devices.filter(d => d.kind === 'videoinput').map(d => (
+                            <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Microphone Select */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Microphone</label>
+                      <select 
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-white/30 transition-colors"
+                        value={constraints.audioDeviceId}
+                        onChange={(e) => { setConstraints({...constraints, audioDeviceId: e.target.value}); }}
+                      >
+                        <option value="">Default Mic</option>
+                        {devices.filter(d => d.kind === 'audioinput').map(d => (
+                          <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                        ))}
+                      </select>
+                    </div>
                 </div>
               </div>
             )}

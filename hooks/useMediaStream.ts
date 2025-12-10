@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MediaDevice, MediaConstraints, RecordingType } from '../types';
 
 export const useMediaStream = (type: RecordingType, constraints: MediaConstraints, active: boolean = true) => {
@@ -6,6 +6,13 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
   const [devices, setDevices] = useState<MediaDevice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
+
+  // Keep a ref to the current stream to access it in startStream without adding it to dependencies
+  // This avoids infinite loops when adding startStream to the useEffect dependencies
+  const streamRef = useRef<MediaStream | null>(null);
+  useEffect(() => {
+    streamRef.current = stream;
+  }, [stream]);
 
   // Stop all tracks in the current stream
   const stopStream = useCallback(() => {
@@ -34,9 +41,9 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
   const startStream = useCallback(async () => {
     if (!active) return; // Prevent starting if inactive
 
-    // Stop any existing tracks first
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+    // Stop any existing tracks first using ref
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
     }
     setError(null);
 
@@ -109,7 +116,7 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
       setPermissionGranted(false);
       setStream(null);
     }
-  }, [type, constraints, getDevices, stream, active]);
+  }, [type, constraints, getDevices, active]); // Removed stream dependency
 
   const switchCamera = useCallback(async () => {
     if (type !== 'video' || !active) return;
@@ -129,18 +136,18 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
   useEffect(() => {
     // If becoming inactive, stop everything immediately
     if (!active) {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
         setStream(null);
         setPermissionGranted(false);
       }
       return;
     }
 
-    // If active, handle mode switching
-    // Clean up previous stream when type changes
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+    // If active, handle mode switching or constraint changes
+    // Clean up previous stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
       setStream(null);
       setPermissionGranted(false);
     }
@@ -149,8 +156,7 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
     if (type !== 'screen') {
       startStream();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, active]); // Trigger when type OR active state changes
+  }, [type, active, startStream]); // Added startStream dependency
 
   // Device change listener
   useEffect(() => {
@@ -165,8 +171,9 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (stream) {
-         stream.getTracks().forEach(t => t.stop());
+      // Use ref for cleanup to be safe
+      if (streamRef.current) {
+         streamRef.current.getTracks().forEach(t => t.stop());
       }
     };
   }, []);
