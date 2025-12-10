@@ -8,6 +8,7 @@ import { formatTime, generateId } from './utils/format';
 
 const App: React.FC = () => {
   // --- State ---
+  const [view, setView] = useState<'home' | 'studio'>('home');
   const [mode, setMode] = useState<RecordingType>('video');
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -33,7 +34,8 @@ const App: React.FC = () => {
   const timerRef = useRef<number | null>(null);
 
   // --- Hooks ---
-  const { stream, devices, error, permissionGranted, startStream, switchCamera } = useMediaStream(mode, constraints);
+  // Only activate media stream when in 'studio' view
+  const { stream, devices, error, permissionGranted, startStream, switchCamera } = useMediaStream(mode, constraints, view === 'studio');
 
   // --- Effects ---
 
@@ -50,13 +52,13 @@ const App: React.FC = () => {
   useEffect(() => {
     let active = true;
     
-    if (mode === 'screen') {
-      // Small delay to ensure main stream transitions don't conflict
+    // Only fetch PiP if in studio mode and screen mode
+    if (view === 'studio' && mode === 'screen') {
       const getPip = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { width: 320, height: 240, facingMode: 'user' },
-            audio: false // Audio is handled by the main recorder
+            audio: false 
           });
           if (active) setPipStream(stream);
         } catch (e) {
@@ -65,7 +67,7 @@ const App: React.FC = () => {
       };
       getPip();
     } else {
-      // Cleanup PiP if not in screen mode
+      // Cleanup PiP
       if (pipStream) {
         pipStream.getTracks().forEach(t => t.stop());
         setPipStream(null);
@@ -74,10 +76,8 @@ const App: React.FC = () => {
 
     return () => {
       active = false;
-      // We don't stop tracks here on unmount/re-render immediately to prevent flickering during quick updates,
-      // but we do ensure we stop them if mode changes in the else block above.
     };
-  }, [mode]); // Only re-run if mode changes
+  }, [mode, view]); 
 
   // Attach PiP stream
   useEffect(() => {
@@ -89,9 +89,22 @@ const App: React.FC = () => {
 
   // --- Handlers ---
 
+  const handleEnterStudio = (selectedMode: RecordingType) => {
+    setMode(selectedMode);
+    setView('studio');
+  };
+
+  const handleBackToHome = () => {
+    if (isRecording) {
+      if(!window.confirm("Recording is in progress. Are you sure you want to stop and leave?")) return;
+      handleStopRecording();
+    }
+    setView('home');
+    setShowSettings(false);
+  };
+
   const handleStartRecording = useCallback(() => {
     if (!stream) {
-      // If in screen mode and no stream, this button acts as "Start Sharing"
       if (mode === 'screen') {
         startStream();
         return;
@@ -106,12 +119,10 @@ const App: React.FC = () => {
       return;
     }
 
-    // Determine MIME type with MP4 preference
     let options: MediaRecorderOptions = {};
     if (mode === 'audio') {
       options.mimeType = 'audio/webm';
     } else {
-      // Prefer MP4 for broader compatibility
       if (MediaRecorder.isTypeSupported('video/mp4')) {
         options.mimeType = 'video/mp4';
       } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
@@ -213,254 +224,340 @@ const App: React.FC = () => {
 
   // --- Render ---
 
-  // Editor Modal
-  if (selectedMediaId) {
-    const media = recordedMedia.find(m => m.id === selectedMediaId);
-    if (media) {
-      return (
-        <Editor 
-          media={media} 
-          onClose={() => setSelectedMediaId(null)} 
-          onDelete={(id) => deleteMedia(id)}
-          onUpdate={updateMediaName}
-        />
-      );
-    }
-  }
-
   return (
     <div className="relative h-full w-full bg-background flex flex-col overflow-hidden font-sans">
       
-      {/* --- Viewfinder Area --- */}
-      <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        
-        {/* Permission Error State */}
-        {!permissionGranted && error && mode !== 'screen' && (
-           <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-50 p-6 text-center">
-             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-               <Icons.Camera className="w-8 h-8 text-red-500" />
-             </div>
-             <h3 className="text-xl font-bold text-white mb-2">Camera Access Required</h3>
-             <p className="text-gray-400 mb-6 max-w-sm">
-               {error}. Please check your browser permissions settings and try again.
-             </p>
-             <button 
-               onClick={() => startStream()}
-               className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-             >
-               Retry Access
-             </button>
-           </div>
-        )}
-
-        {/* Screen Share Start Prompt */}
-        {mode === 'screen' && !stream && (
-          <div className="text-center z-10 relative flex flex-col items-center">
-             {error && (
-               <div className="mb-4 text-red-400 bg-red-950/50 px-4 py-2 rounded-lg border border-red-500/20 max-w-xs mx-auto text-sm">
-                 {error}
-               </div>
-             )}
-            <button 
-              onClick={() => startStream()}
-              className="group relative px-8 py-4 bg-surface border border-white/20 rounded-full hover:bg-white/10 flex items-center gap-3 transition-all mx-auto overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Icons.Screen className="w-6 h-6 text-white" />
-              <span className="font-bold text-lg">Start Screen Share</span>
-            </button>
-            <p className="mt-4 text-gray-500 text-sm max-w-xs">
-              Click above to select a window or screen to record. 
+      {/* ==================== HOME SCREEN ==================== */}
+      {view === 'home' && (
+        <div className="h-full w-full flex flex-col items-center justify-center p-6 animate-in fade-in duration-500 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-800/30 to-background">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 mb-4 tracking-tighter">
+              Lumina Capture
+            </h1>
+            <p className="text-gray-400 text-lg md:text-xl max-w-md mx-auto">
+               Professional recording studio. Choose a mode to begin.
             </p>
           </div>
-        )}
 
-        {/* Main Video Element */}
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
-          className={`w-full h-full object-contain transition-opacity duration-500 ${mode === 'audio' ? 'opacity-20 blur-xl' : 'opacity-100'}`}
-        />
-
-        {/* PiP Camera (Screen Mode Only) */}
-        {mode === 'screen' && pipStream && (
-          <div className="absolute bottom-32 right-6 w-48 aspect-[3/4] md:w-64 md:aspect-video bg-black rounded-xl border border-white/20 overflow-hidden shadow-2xl z-20 animate-in slide-in-from-bottom-10 fade-in duration-500">
-             <video 
-               ref={pipVideoRef}
-               autoPlay
-               playsInline
-               muted
-               className="w-full h-full object-cover transform scale-x-[-1]" 
-             />
-             <div className="absolute bottom-2 right-2 flex gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]"></div>
-             </div>
-          </div>
-        )}
-        
-        {/* Audio Mode Visualizer Overlay */}
-        {mode === 'audio' && permissionGranted && (
-          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-            <div className="w-full max-w-md h-64 p-8">
-              <Visualizer stream={stream} isActive={true} type="bar" />
-            </div>
-          </div>
-        )}
-
-        {/* Recording Indicator */}
-        {isRecording && (
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-red-500/10 backdrop-blur-md border border-red-500/20 px-4 py-1.5 rounded-full z-20">
-            <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
-            <span className="font-mono font-bold text-white tracking-widest text-sm shadow-black drop-shadow-md">
-              {formatTime(recordingTime)}
-            </span>
-          </div>
-        )}
-
-        {/* Camera Flip Button */}
-        {mode === 'video' && permissionGranted && !isRecording && (
-          <button 
-            onClick={handleSwitchCamera}
-            className="absolute top-6 right-6 p-3 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/10 hover:bg-white/20 transition-all z-20"
-          >
-            <Icons.Flip className="w-6 h-6" />
-          </button>
-        )}
-      </div>
-
-      {/* --- Compact Control Bar --- */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md z-30">
-        <div className="bg-black/60 backdrop-blur-xl rounded-full border border-white/10 p-3 shadow-2xl">
-          
-          <div className="flex items-center justify-between gap-4">
-            
-            {/* Gallery Button */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl z-10">
+            {/* Card 1: Video */}
             <button 
-               onClick={() => setShowGallery(!showGallery)}
-               className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 overflow-hidden group shrink-0"
+              onClick={() => handleEnterStudio('video')} 
+              className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-primary/50 text-left overflow-hidden shadow-2xl"
             >
-              {recordedMedia.length > 0 && recordedMedia[0].type !== 'audio' ? (
-                  <video src={recordedMedia[0].url} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
-              ) : (
-                  <Icons.Gallery className="w-5 h-5 text-gray-400 group-hover:text-white" />
-              )}
+              <div className="absolute top-0 right-0 p-24 bg-primary/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-primary/50 text-white group-hover:text-primary transition-colors">
+                  <Icons.Video className="w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Video</h3>
+                <p className="text-gray-400 text-sm">Record high-quality video with manual camera controls.</p>
+              </div>
             </button>
 
-            {/* Mode Switcher (Pill) */}
-             <div className="flex bg-white/5 rounded-full p-1 border border-white/5 shrink-0 hidden md:flex">
-              {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
-                <button 
-                  key={m}
-                  onClick={() => switchMode(m)}
-                  className={`
-                    w-10 h-8 flex items-center justify-center rounded-full transition-all
-                    ${mode === m ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}
-                  `}
-                  title={m.charAt(0).toUpperCase() + m.slice(1)}
-                >
-                   {m === 'video' && <Icons.Video className="w-4 h-4" />}
-                   {m === 'audio' && <Icons.Mic className="w-4 h-4" />}
-                   {m === 'screen' && <Icons.Screen className="w-4 h-4" />}
-                </button>
-              ))}
-            </div>
-
-            {/* Mobile Mode Switcher Trigger (Just Current Icon) */}
-            <div className="md:hidden">
-              <button className="w-10 h-8 bg-white text-black rounded-full flex items-center justify-center">
-                   {mode === 'video' && <Icons.Video className="w-4 h-4" />}
-                   {mode === 'audio' && <Icons.Mic className="w-4 h-4" />}
-                   {mode === 'screen' && <Icons.Screen className="w-4 h-4" />}
-              </button>
-            </div>
-
-
-            {/* Shutter Button (Redesigned) */}
-            <div className="relative group shrink-0">
-               <button 
-                disabled={!permissionGranted && mode !== 'screen'}
-                onClick={isRecording ? handleStopRecording : handleStartRecording}
-                className={`
-                  w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300
-                  ${!permissionGranted && mode !== 'screen' ? 'opacity-50 cursor-not-allowed' : ''}
-                  ${isRecording 
-                    ? 'border-4 border-red-500 bg-transparent' 
-                    : 'border-4 border-white bg-transparent hover:scale-105 hover:border-white'
-                  }
-                `}
-              >
-                <div className={`
-                  transition-all duration-300 ease-in-out
-                  ${isRecording 
-                    ? 'w-6 h-6 bg-red-500 rounded-md' 
-                    : 'w-12 h-12 bg-red-600 rounded-full border-2 border-transparent'
-                  }
-                `} />
-              </button>
-            </div>
-
-            {/* Settings Button */}
+            {/* Card 2: Audio */}
             <button 
-               onClick={() => setShowSettings(!showSettings)}
-               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all border border-white/5 shrink-0 ${showSettings ? 'bg-white text-black' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
+              onClick={() => handleEnterStudio('audio')} 
+              className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-accent/50 text-left overflow-hidden shadow-2xl"
             >
-              <Icons.Settings className="w-5 h-5" />
+              <div className="absolute top-0 right-0 p-24 bg-accent/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-accent/50 text-white group-hover:text-accent transition-colors">
+                  <Icons.Mic className="w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Audio</h3>
+                <p className="text-gray-400 text-sm">Capture crystal clear audio with visualizer feedback.</p>
+              </div>
+            </button>
+
+            {/* Card 3: Screen */}
+            <button 
+              onClick={() => handleEnterStudio('screen')} 
+              className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-green-500/50 text-left overflow-hidden shadow-2xl"
+            >
+              <div className="absolute top-0 right-0 p-24 bg-green-500/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10">
+                <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-green-500/50 text-white group-hover:text-green-500 transition-colors">
+                  <Icons.Screen className="w-7 h-7" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Screen</h3>
+                <p className="text-gray-400 text-sm">Share and record your screen for presentations.</p>
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-12 z-10">
+            <button 
+              onClick={() => setShowGallery(true)} 
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all text-sm font-medium text-gray-300 hover:text-white"
+            >
+              <Icons.Gallery className="w-4 h-4" />
+              Open Library ({recordedMedia.length})
             </button>
           </div>
         </div>
+      )}
 
-        {/* Settings Panel Popover */}
-        {showSettings && (
-          <div className="absolute bottom-full left-0 right-0 mb-4 bg-surface/95 backdrop-blur-xl rounded-2xl border border-white/10 p-4 animate-in slide-in-from-bottom-2 shadow-2xl">
-             <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</h3>
-                <button onClick={() => setShowSettings(false)}><Icons.Close className="w-4 h-4 text-gray-400" /></button>
-             </div>
-             <div className="space-y-3">
-                <div className="md:hidden flex gap-2 mb-4 bg-black/20 p-2 rounded-lg justify-center">
-                    {/* Mobile Mode Switcher inside Settings for better UX if hidden in main bar */}
-                     {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
-                        <button 
-                          key={m}
-                          onClick={() => switchMode(m)}
-                          className={`
-                            px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex-1
-                            ${mode === m ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}
-                          `}
-                        >
-                           {m}
-                        </button>
-                      ))}
+      {/* ==================== STUDIO MODE ==================== */}
+      {view === 'studio' && (
+        <>
+          {/* --- Viewfinder Area --- */}
+          <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            
+            {/* Back to Home Button */}
+            {!isRecording && (
+              <button 
+                onClick={handleBackToHome}
+                className="absolute top-6 left-6 p-3 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/10 hover:bg-white/20 transition-all z-20 group"
+                title="Back to Home"
+              >
+                <Icons.Back className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
+              </button>
+            )}
+
+            {/* Permission Error State */}
+            {!permissionGranted && error && mode !== 'screen' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-50 p-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                  <Icons.Camera className="w-8 h-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Camera Access Required</h3>
+                <p className="text-gray-400 mb-6 max-w-sm">
+                  {error}. Please check your browser permissions settings and try again.
+                </p>
+                <button 
+                  onClick={() => startStream()}
+                  className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  Retry Access
+                </button>
+              </div>
+            )}
+
+            {/* Screen Share Start Prompt */}
+            {mode === 'screen' && !stream && (
+              <div className="text-center z-10 relative flex flex-col items-center">
+                {error && (
+                  <div className="mb-4 text-red-400 bg-red-950/50 px-4 py-2 rounded-lg border border-red-500/20 max-w-xs mx-auto text-sm">
+                    {error}
+                  </div>
+                )}
+                <button 
+                  onClick={() => startStream()}
+                  className="group relative px-8 py-4 bg-surface border border-white/20 rounded-full hover:bg-white/10 flex items-center gap-3 transition-all mx-auto overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Icons.Screen className="w-6 h-6 text-white" />
+                  <span className="font-bold text-lg">Start Screen Share</span>
+                </button>
+                <p className="mt-4 text-gray-500 text-sm max-w-xs">
+                  Click above to select a window or screen to record. 
+                </p>
+              </div>
+            )}
+
+            {/* Main Video Element */}
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={`w-full h-full object-contain transition-opacity duration-500 ${mode === 'audio' ? 'opacity-20 blur-xl' : 'opacity-100'}`}
+            />
+
+            {/* PiP Camera (Screen Mode Only) */}
+            {mode === 'screen' && pipStream && (
+              <div className="absolute bottom-32 right-6 w-48 aspect-[3/4] md:w-64 md:aspect-video bg-black rounded-xl border border-white/20 overflow-hidden shadow-2xl z-20 animate-in slide-in-from-bottom-10 fade-in duration-500">
+                <video 
+                  ref={pipVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover transform scale-x-[-1]" 
+                />
+                <div className="absolute bottom-2 right-2 flex gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]"></div>
+                </div>
+              </div>
+            )}
+            
+            {/* Audio Mode Visualizer Overlay */}
+            {mode === 'audio' && permissionGranted && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <div className="w-full max-w-md h-64 p-8">
+                  <Visualizer stream={stream} isActive={true} type="bar" />
+                </div>
+              </div>
+            )}
+
+            {/* Recording Indicator */}
+            {isRecording && (
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-red-500/10 backdrop-blur-md border border-red-500/20 px-4 py-1.5 rounded-full z-20">
+                <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+                <span className="font-mono font-bold text-white tracking-widest text-sm shadow-black drop-shadow-md">
+                  {formatTime(recordingTime)}
+                </span>
+              </div>
+            )}
+
+            {/* Camera Flip Button */}
+            {mode === 'video' && permissionGranted && !isRecording && (
+              <button 
+                onClick={handleSwitchCamera}
+                className="absolute top-6 right-6 p-3 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/10 hover:bg-white/20 transition-all z-20"
+              >
+                <Icons.Flip className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+
+          {/* --- Compact Control Bar --- */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md z-30">
+            <div className="bg-black/60 backdrop-blur-xl rounded-full border border-white/10 p-3 shadow-2xl">
+              <div className="flex items-center justify-between gap-4">
+                
+                {/* Gallery Button */}
+                <button 
+                  onClick={() => setShowGallery(!showGallery)}
+                  className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5 overflow-hidden group shrink-0"
+                >
+                  {recordedMedia.length > 0 && recordedMedia[0].type !== 'audio' ? (
+                      <video src={recordedMedia[0].url} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
+                  ) : (
+                      <Icons.Gallery className="w-5 h-5 text-gray-400 group-hover:text-white" />
+                  )}
+                </button>
+
+                {/* Mode Switcher (Pill) */}
+                <div className="flex bg-white/5 rounded-full p-1 border border-white/5 shrink-0 hidden md:flex">
+                  {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
+                    <button 
+                      key={m}
+                      onClick={() => switchMode(m)}
+                      className={`
+                        w-10 h-8 flex items-center justify-center rounded-full transition-all
+                        ${mode === m ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+                      `}
+                      title={m.charAt(0).toUpperCase() + m.slice(1)}
+                    >
+                      {m === 'video' && <Icons.Video className="w-4 h-4" />}
+                      {m === 'audio' && <Icons.Mic className="w-4 h-4" />}
+                      {m === 'screen' && <Icons.Screen className="w-4 h-4" />}
+                    </button>
+                  ))}
                 </div>
 
-                <select 
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
-                  value={constraints.videoDeviceId}
-                  onChange={(e) => { setConstraints({...constraints, videoDeviceId: e.target.value}); if(mode!=='screen') startStream(); }}
-                >
-                   <option value="">Default Camera</option>
-                  {devices.filter(d => d.kind === 'videoinput').map(d => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-                  ))}
-                </select>
-                <select 
-                   className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
-                   value={constraints.audioDeviceId}
-                   onChange={(e) => { setConstraints({...constraints, audioDeviceId: e.target.value}); if(mode!=='screen') startStream(); }}
-                >
-                  <option value="">Default Mic</option>
-                  {devices.filter(d => d.kind === 'audioinput').map(d => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
-                  ))}
-                </select>
-             </div>
-          </div>
-        )}
-      </div>
+                {/* Mobile Mode Switcher */}
+                <div className="md:hidden">
+                  <button className="w-10 h-8 bg-white text-black rounded-full flex items-center justify-center">
+                      {mode === 'video' && <Icons.Video className="w-4 h-4" />}
+                      {mode === 'audio' && <Icons.Mic className="w-4 h-4" />}
+                      {mode === 'screen' && <Icons.Screen className="w-4 h-4" />}
+                  </button>
+                </div>
 
-      {/* --- Gallery Sheet --- */}
+                {/* Shutter Button */}
+                <div className="relative group shrink-0">
+                  <button 
+                    disabled={!permissionGranted && mode !== 'screen'}
+                    onClick={isRecording ? handleStopRecording : handleStartRecording}
+                    className={`
+                      w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300
+                      ${!permissionGranted && mode !== 'screen' ? 'opacity-50 cursor-not-allowed' : ''}
+                      ${isRecording 
+                        ? 'border-4 border-red-500 bg-transparent' 
+                        : 'border-4 border-white bg-transparent hover:scale-105 hover:border-white'
+                      }
+                    `}
+                  >
+                    <div className={`
+                      transition-all duration-300 ease-in-out
+                      ${isRecording 
+                        ? 'w-6 h-6 bg-red-500 rounded-md' 
+                        : 'w-12 h-12 bg-red-600 rounded-full border-2 border-transparent'
+                      }
+                    `} />
+                  </button>
+                </div>
+
+                {/* Settings Button */}
+                <button 
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all border border-white/5 shrink-0 ${showSettings ? 'bg-white text-black' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
+                >
+                  <Icons.Settings className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Settings Panel Popover */}
+            {showSettings && (
+              <div className="absolute bottom-full left-0 right-0 mb-4 bg-surface/95 backdrop-blur-xl rounded-2xl border border-white/10 p-4 animate-in slide-in-from-bottom-2 shadow-2xl">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</h3>
+                    <button onClick={() => setShowSettings(false)}><Icons.Close className="w-4 h-4 text-gray-400" /></button>
+                </div>
+                <div className="space-y-3">
+                    <div className="md:hidden flex gap-2 mb-4 bg-black/20 p-2 rounded-lg justify-center">
+                        {(['video', 'audio', 'screen'] as RecordingType[]).map((m) => (
+                            <button 
+                              key={m}
+                              onClick={() => switchMode(m)}
+                              className={`
+                                px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-all flex-1
+                                ${mode === m ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}
+                              `}
+                            >
+                              {m}
+                            </button>
+                          ))}
+                    </div>
+
+                    <select 
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      value={constraints.videoDeviceId}
+                      onChange={(e) => { setConstraints({...constraints, videoDeviceId: e.target.value}); if(mode!=='screen') startStream(); }}
+                    >
+                      <option value="">Default Camera</option>
+                      {devices.filter(d => d.kind === 'videoinput').map(d => (
+                        <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                      ))}
+                    </select>
+                    <select 
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none"
+                      value={constraints.audioDeviceId}
+                      onChange={(e) => { setConstraints({...constraints, audioDeviceId: e.target.value}); if(mode!=='screen') startStream(); }}
+                    >
+                      <option value="">Default Mic</option>
+                      {devices.filter(d => d.kind === 'audioinput').map(d => (
+                        <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                      ))}
+                    </select>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ==================== SHARED OVERLAYS ==================== */}
+      
+      {/* Editor Modal */}
+      {selectedMediaId && (
+        (() => {
+          const media = recordedMedia.find(m => m.id === selectedMediaId);
+          return media ? (
+            <Editor 
+              media={media} 
+              onClose={() => setSelectedMediaId(null)} 
+              onDelete={(id) => deleteMedia(id)}
+              onUpdate={updateMediaName}
+            />
+          ) : null;
+        })()
+      )}
+
+      {/* Gallery Sheet */}
       {showGallery && (
         <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-xl animate-in slide-in-from-bottom-full duration-300 flex flex-col">
           <div className="p-4 flex items-center justify-between border-b border-white/10 bg-black/20">

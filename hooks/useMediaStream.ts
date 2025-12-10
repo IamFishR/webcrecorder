@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MediaDevice, MediaConstraints, RecordingType } from '../types';
 
-export const useMediaStream = (type: RecordingType, constraints: MediaConstraints) => {
+export const useMediaStream = (type: RecordingType, constraints: MediaConstraints, active: boolean = true) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [devices, setDevices] = useState<MediaDevice[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +32,8 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
 
   // Request stream
   const startStream = useCallback(async () => {
+    if (!active) return; // Prevent starting if inactive
+
     // Stop any existing tracks first
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
@@ -107,10 +109,10 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
       setPermissionGranted(false);
       setStream(null);
     }
-  }, [type, constraints, getDevices, stream]); // Added stream to dep to allow proper cleanup logic
+  }, [type, constraints, getDevices, stream, active]);
 
   const switchCamera = useCallback(async () => {
-    if (type !== 'video') return;
+    if (type !== 'video' || !active) return;
     
     const videoDevices = devices.filter(d => d.kind === 'videoinput');
     if (videoDevices.length < 2) return;
@@ -121,12 +123,22 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
 
     return nextDeviceId;
 
-  }, [devices, type, constraints.videoDeviceId]);
+  }, [devices, type, constraints.videoDeviceId, active]);
 
-  // Handle Mode Switching Cleanup and Auto-start
+  // Handle Mode Switching and Active State
   useEffect(() => {
-    // When type changes, we MUST stop the previous stream to avoid zombie tracks
-    // and to ensure the UI knows we are in a 'pending' state for the new mode.
+    // If becoming inactive, stop everything immediately
+    if (!active) {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+        setPermissionGranted(false);
+      }
+      return;
+    }
+
+    // If active, handle mode switching
+    // Clean up previous stream when type changes
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -137,17 +149,18 @@ export const useMediaStream = (type: RecordingType, constraints: MediaConstraint
     if (type !== 'screen') {
       startStream();
     }
-    // For screen, we leave stream null so the UI can show a "Start" button
-    
-  }, [type]); // ONLY trigger on type change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, active]); // Trigger when type OR active state changes
 
   // Device change listener
   useEffect(() => {
-    navigator.mediaDevices.addEventListener('devicechange', getDevices);
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', getDevices);
-    };
-  }, [getDevices]);
+    if (active) {
+      navigator.mediaDevices.addEventListener('devicechange', getDevices);
+      return () => {
+        navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+      };
+    }
+  }, [getDevices, active]);
 
   // Cleanup on unmount
   useEffect(() => {
