@@ -17,6 +17,9 @@ const App: React.FC = () => {
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   
+  // Continuous Mode State
+  const [isContinuous, setIsContinuous] = useState(false);
+  
   // PiP Camera State
   const [pipStream, setPipStream] = useState<MediaStream | null>(null);
   
@@ -32,6 +35,15 @@ const App: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
+  
+  // Refs for Continuous Mode Logic
+  const isContinuousRef = useRef(isContinuous);
+  const isLoopingRef = useRef(false);
+
+  // Sync ref with state
+  useEffect(() => {
+    isContinuousRef.current = isContinuous;
+  }, [isContinuous]);
 
   // --- Hooks ---
   // Only activate media stream when in 'studio' view
@@ -136,6 +148,26 @@ const App: React.FC = () => {
       const recorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
+      isLoopingRef.current = false;
+
+      // Internal helper to manage the timer logic
+      const startTimer = (initialTimeOffset: number = 0) => {
+          if (timerRef.current) clearInterval(timerRef.current as any);
+          const startTime = Date.now() - initialTimeOffset * 1000;
+          
+          timerRef.current = window.setInterval(() => {
+            const sec = Math.floor((Date.now() - startTime) / 1000);
+            setRecordingTime(sec);
+
+            // Continuous Mode Check: 20 minutes = 1200 seconds
+            if (isContinuousRef.current && sec >= 1200) {
+               isLoopingRef.current = true;
+               if (recorder.state !== 'inactive') {
+                   recorder.stop();
+               }
+            }
+          }, 1000);
+      };
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -153,12 +185,27 @@ const App: React.FC = () => {
           blob,
           url,
           createdAt: Date.now(),
-          duration: recordingTime,
-          name: `${mode === 'screen' ? 'Screen' : mode === 'video' ? 'Video' : 'Audio'} ${recordedMedia.length + 1}`
+          duration: isLoopingRef.current ? 1200 : recordingTime, // Accurate duration for loop
+          name: `${mode === 'screen' ? 'Screen' : mode === 'video' ? 'Video' : 'Audio'} ${recordedMedia.length + 1}${isLoopingRef.current ? ' (Part)' : ''}`
         };
+        
+        // Save the file
         setRecordedMedia(prev => [newRecording, ...prev]);
-        setRecordingTime(0);
-        if (timerRef.current) clearInterval(timerRef.current as any);
+
+        if (isLoopingRef.current) {
+            // RESTART LOGIC
+            chunksRef.current = []; // Clear buffer
+            isLoopingRef.current = false; // Reset flag
+            recorder.start(200); // Start immediately
+            setRecordingTime(0); // Reset UI timer
+            startTimer(0); // Restart timer from 0
+        } else {
+            // STOP LOGIC
+            setRecordingTime(0);
+            if (timerRef.current) clearInterval(timerRef.current as any);
+            setIsRecording(false);
+            setIsPaused(false);
+        }
       };
 
       recorder.onerror = (e) => {
@@ -169,11 +216,7 @@ const App: React.FC = () => {
       recorder.start(200); 
       setIsRecording(true);
       setIsPaused(false);
-
-      const startTime = Date.now() - recordingTime * 1000;
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
+      startTimer(recordingTime); // Start timer (handle resume case by passing recordingTime)
 
     } catch (e) {
       console.error("Recorder initialization failed", e);
@@ -186,9 +229,7 @@ const App: React.FC = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-    setIsRecording(false);
-    setIsPaused(false);
-    if (timerRef.current) clearInterval(timerRef.current as any);
+    // Note: State updates happen in recorder.onstop
   }, []);
 
   const handleSwitchCamera = async () => {
@@ -386,6 +427,11 @@ const App: React.FC = () => {
                 <span className="font-mono font-bold text-white tracking-widest text-sm shadow-black drop-shadow-md">
                   {formatTime(recordingTime)}
                 </span>
+                {isContinuous && (
+                    <div className="border-l border-white/20 pl-3 ml-1" title="Continuous Mode Active">
+                        <Icons.Flip className="w-4 h-4 text-blue-400 rotate-90" />
+                    </div>
+                )}
               </div>
             )}
 
@@ -484,6 +530,27 @@ const App: React.FC = () => {
                             </button>
                           ))}
                     </div>
+                    
+                    {/* Continuous Mode Toggle (Only in Video) */}
+                    {mode === 'video' && (
+                        <div className="flex items-center justify-between bg-black/30 p-3 rounded-lg border border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-full bg-white/5">
+                                    <Icons.Flip className="w-4 h-4 text-blue-400 rotate-90" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-white">Continuous Mode</p>
+                                    <p className="text-[10px] text-gray-400">Save every 20 mins</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsContinuous(!isContinuous)}
+                                className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${isContinuous ? 'bg-blue-500' : 'bg-white/20'}`}
+                            >
+                                <div className={`absolute top-1 bottom-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${isContinuous ? 'left-6' : 'left-1'}`} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Video Quality (Only in Video Mode) */}
                     {mode === 'video' && (
