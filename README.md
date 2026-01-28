@@ -1,20 +1,52 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <img src="./Lumina-Capture-home.png" alt="Lumina Capture Home" width="100%" style="border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
 </div>
 
-# Run and deploy your AI Studio app
+# Lumina Capture
 
-This contains everything you need to run your app locally.
+**Lumina Capture** is a professional-grade web-based recording studio built with React and TypeScript. It offers a premium, modern interface to capture video, audio, and screen recordings directly from your browser.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1nSiwwDs3LPH0k7wehDeGWFsqhi9kEc6S
+## ✨ Features
 
-## Run Locally
+- **🎥 Professional Video Recording**: Capture high-quality video up to 4K resolution. Support for multiple camera inputs and mirroring.
+- **🎤 Advanced Audio Recording**: Record crystal-clear audio with a built-in real-time visualizer.
+- **🖥️ Smart Screen Recording**: Share and record your screen for presentations, tutorials, or gameplay, complete with Picture-in-Picture (PiP) camera overlay.
+- **📂 Local Library Management**: Instant access to your recordings with an integrated gallery. Rename, download, or delete files with ease.
+- **🌗 Modern UI**: specialized dark mode interface designed for focus and clarity.
 
-**Prerequisites:**  Node.js
+## 🛠️ Tech Stack
 
+- **Framework**: [React 19](https://react.dev/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Language**: TypeScript
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🚀 Run Locally
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Open your browser:**
+   Navigate to `http://localhost:5173` (or the URL shown in your terminal).
+
+## 📦 Build for Production
+
+To create a production-ready build:
+
+```bash
+npm run build
+```
+
+The output will be in the `dist` directory.
+
+## 📝 License
+
+This project is open source and available for personal use.

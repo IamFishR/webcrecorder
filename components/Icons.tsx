@@ -1,17 +1,17 @@
 import React from 'react';
-import { 
-  Camera, 
-  Mic, 
-  Settings, 
-  Circle, 
-  Square, 
-  Play, 
-  Pause, 
-  X, 
-  Check, 
-  Scissors, 
-  Download, 
-  Trash2, 
+import {
+  Camera,
+  Mic,
+  Settings,
+  Circle,
+  Square,
+  Play,
+  Pause,
+  X,
+  Check,
+  Scissors,
+  Download,
+  Trash2,
   MoreVertical,
   Video,
   ChevronLeft,
@@ -28,7 +28,8 @@ import {
   Volume2,
   VolumeX,
   Share2,
-  Home
+  Home,
+  Edit3
 } from 'lucide-react';
 
 export const Icons = {
@@ -60,5 +61,7 @@ export const Icons = {
   Volume: Volume2,
   Mute: VolumeX,
   Share: Share2,
-  Home
+
+  Home,
+  Edit: Edit3
 };
