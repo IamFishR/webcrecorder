@@ -276,78 +276,110 @@ const App: React.FC = () => {
       {/* ==================== HOME SCREEN ==================== */}
       {view === 'home' && (
         <div className="h-full w-full overflow-y-auto bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-800/30 to-background">
-          <div className="flex flex-col items-center justify-center min-h-screen p-6 animate-in fade-in duration-500">
-            <div className="text-center mb-12 mt-12 md:mt-0">
-              <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 mb-4 tracking-tighter">
-                Lumina Capture
-              </h1>
-              <p className="text-gray-400 text-lg md:text-xl max-w-md mx-auto">
-                Professional recording studio. Choose a mode to begin.
-              </p>
-            </div>
+          <div className="flex flex-col min-h-screen animate-in fade-in duration-500">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 w-full">
+              <div className="text-center mb-12 mt-12 md:mt-0">
+                <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 mb-4 tracking-tighter">
+                  Lumina Capture
+                </h1>
+                <p className="text-gray-400 text-lg md:text-xl max-w-md mx-auto">
+                  Professional recording studio. Choose a mode to begin.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl z-10">
-              {/* Card 1: Video */}
-              <button
-                onClick={() => handleEnterStudio('video')}
-                className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-primary/50 text-left overflow-hidden shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 p-24 bg-primary/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-primary/50 text-white group-hover:text-primary transition-colors">
-                    <Icons.Video className="w-7 h-7" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl z-10">
+                {/* Card 1: Video */}
+                <button
+                  onClick={() => handleEnterStudio('video')}
+                  className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-primary/50 text-left overflow-hidden shadow-2xl"
+                >
+                  <div className="absolute top-0 right-0 p-24 bg-primary/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-primary/50 text-white group-hover:text-primary transition-colors">
+                      <Icons.Video className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Video</h3>
+                    <p className="text-gray-400 text-sm">Record high-quality video with manual camera controls.</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Video</h3>
-                  <p className="text-gray-400 text-sm">Record high-quality video with manual camera controls.</p>
-                </div>
-              </button>
+                </button>
 
-              {/* Card 2: Audio */}
-              <button
-                onClick={() => handleEnterStudio('audio')}
-                className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-accent/50 text-left overflow-hidden shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 p-24 bg-accent/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-accent/50 text-white group-hover:text-accent transition-colors">
-                    <Icons.Mic className="w-7 h-7" />
+                {/* Card 2: Audio */}
+                <button
+                  onClick={() => handleEnterStudio('audio')}
+                  className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-accent/50 text-left overflow-hidden shadow-2xl"
+                >
+                  <div className="absolute top-0 right-0 p-24 bg-accent/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-accent/50 text-white group-hover:text-accent transition-colors">
+                      <Icons.Mic className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Audio</h3>
+                    <p className="text-gray-400 text-sm">Capture crystal clear audio with visualizer feedback.</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Audio</h3>
-                  <p className="text-gray-400 text-sm">Capture crystal clear audio with visualizer feedback.</p>
-                </div>
-              </button>
+                </button>
 
-              {/* Card 3: Screen */}
-              <button
-                onClick={() => handleEnterStudio('screen')}
-                className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-green-500/50 text-left overflow-hidden shadow-2xl hidden md:block"
-              >
-                <div className="absolute top-0 right-0 p-24 bg-green-500/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10">
-                  <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-green-500/50 text-white group-hover:text-green-500 transition-colors">
-                    <Icons.Screen className="w-7 h-7" />
+                {/* Card 3: Screen */}
+                <button
+                  onClick={() => handleEnterStudio('screen')}
+                  className="group relative bg-surface/50 backdrop-blur-sm border border-white/10 p-8 rounded-3xl hover:bg-white/5 transition-all hover:scale-105 hover:border-green-500/50 text-left overflow-hidden shadow-2xl hidden md:block"
+                >
+                  <div className="absolute top-0 right-0 p-24 bg-green-500/20 rounded-full blur-3xl -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-14 h-14 bg-zinc-950 rounded-2xl flex items-center justify-center mb-6 border border-white/10 group-hover:border-green-500/50 text-white group-hover:text-green-500 transition-colors">
+                      <Icons.Screen className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Screen</h3>
+                    <p className="text-gray-400 text-sm">Share and record your screen for presentations.</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Screen</h3>
-                  <p className="text-gray-400 text-sm">Share and record your screen for presentations.</p>
-                </div>
-              </button>
-            </div>
+                </button>
+              </div>
 
-            <div className="mt-12 z-10">
-              <button
-                onClick={() => setShowGallery(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all text-sm font-medium text-gray-300 hover:text-white"
-              >
-                <Icons.Gallery className="w-4 h-4" />
-                Open Library ({recordedMedia.length})
-              </button>
-            </div>
+              <div className="mt-12 z-10">
+                <button
+                  onClick={() => setShowGallery(true)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all text-sm font-medium text-gray-300 hover:text-white"
+                >
+                  <Icons.Gallery className="w-4 h-4" />
+                  Open Library ({recordedMedia.length})
+                </button>
+              </div>
 
+            </div>
             <Features />
             <Testimonials />
 
-            <footer className="py-8 text-center text-gray-600 text-sm">
-              <p>© {new Date().getFullYear()} Lumina Capture. All rights reserved.</p>
+            <footer className="py-6 mt-12 border-t border-white/5 bg-black/40 backdrop-blur-sm">
+              <div className="w-full px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
+
+                {/* Copyright (Original) */}
+                <p className="text-gray-500 text-xs md:text-sm order-2 md:order-1">
+                  © {new Date().getFullYear()} Lumina Capture. All rights reserved.
+                </p>
+
+                {/* Developer Info (Compact) */}
+                <div className="flex items-center gap-3 order-1 md:order-2 bg-white/5 pr-4 pl-2 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-colors">
+                  <img
+                    src="https://avatars.githubusercontent.com/u/34508469?s=400&u=3aba6aa42f7cb5066dc1ad28e15c283a812737a8&v=4"
+                    alt="Rakesh Jadhav"
+                    className="w-8 h-8 rounded-full border border-white/20"
+                  />
+                  <div className="flex flex-col leading-none">
+                    <span className="text-gray-300 font-bold text-xs">Rakesh Jadhav</span>
+                    <span className="text-gray-400 text-xs leading-relaxed">UI Developer (6+ Years)</span>
+                  </div>
+                  <div className="w-px h-6 bg-white/10 mx-1" />
+                  <a
+                    href="https://www.linkedin.com/in/thisisrakesh/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-[#0077b5] transition-colors"
+                    title="Connect on LinkedIn"
+                  >
+                    <Icons.Linkedin className="w-4 h-4" />
+                  </a>
+                </div>
+
+              </div>
             </footer>
           </div>
         </div>

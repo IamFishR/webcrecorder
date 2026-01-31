@@ -33,7 +33,8 @@ import {
   Lock,
   Infinity,
   Shield,
-  Layers
+  Layers,
+  Linkedin
 } from 'lucide-react';
 
 export const Icons = {
@@ -71,5 +72,6 @@ export const Icons = {
   Lock,
   Infinity,
   Shield,
-  Layers
+  Layers,
+  Linkedin
 };
