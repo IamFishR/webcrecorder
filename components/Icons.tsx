@@ -29,7 +29,11 @@ import {
   VolumeX,
   Share2,
   Home,
-  Edit3
+  Edit3,
+  Lock,
+  Infinity,
+  Shield,
+  Layers
 } from 'lucide-react';
 
 export const Icons = {
@@ -63,5 +67,9 @@ export const Icons = {
   Share: Share2,
 
   Home,
-  Edit: Edit3
+  Edit: Edit3,
+  Lock,
+  Infinity,
+  Shield,
+  Layers
 };
