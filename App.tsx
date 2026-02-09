@@ -135,18 +135,30 @@ const App: React.FC = () => {
       return;
     }
 
-    let options: MediaRecorderOptions = {};
-    if (mode === 'audio') {
-      options.mimeType = 'audio/webm';
-    } else {
-      if (MediaRecorder.isTypeSupported('video/mp4')) {
-        options.mimeType = 'video/mp4';
-      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-        options.mimeType = 'video/webm;codecs=vp9';
-      } else if (MediaRecorder.isTypeSupported('video/webm')) {
-        options.mimeType = 'video/webm';
+    // Helper to get best supported mime type
+    const getSupportedMimeType = (type: 'video' | 'audio' | 'screen'): string => {
+      if (type === 'audio') return 'audio/webm';
+
+      const types = [
+        'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', // H.264 + AAC (Most compatible)
+        'video/mp4', // Browser default MP4
+        'video/webm; codecs=h264', // WebM with H.264
+        'video/webm; codecs=vp9', // VP9
+        'video/webm' // Default WebM
+      ];
+
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) {
+          console.log(`Using MIME type: ${t}`);
+          return t;
+        }
       }
-    }
+      return 'video/webm'; // Fallback
+    };
+
+    let options: MediaRecorderOptions = {
+      mimeType: getSupportedMimeType(mode)
+    };
 
     try {
       const recorder = new MediaRecorder(stream, options);
@@ -190,7 +202,8 @@ const App: React.FC = () => {
           url,
           createdAt: Date.now(),
           duration: isLoopingRef.current ? 1200 : Math.round((Date.now() - startTimeRef.current) / 1000), // Accurate duration from ref
-          name: `${mode === 'screen' ? 'Screen' : mode === 'video' ? 'Video' : 'Audio'} ${recordedMedia.length + 1}${isLoopingRef.current ? ' (Part)' : ''}`
+          name: `${mode === 'screen' ? 'Screen' : mode === 'video' ? 'Video' : 'Audio'} ${recordedMedia.length + 1}${isLoopingRef.current ? ' (Part)' : ''}`,
+          mimeType
         };
 
         // Save the file
@@ -253,7 +266,18 @@ const App: React.FC = () => {
     if (e) e.stopPropagation();
     const a = document.createElement('a');
     a.href = media.url;
-    a.download = `${media.name}.${media.type === 'audio' ? 'webm' : 'mp4'}`;
+    // Determine extension based on mimeType
+    let ext = 'webm';
+    if (media.mimeType?.includes('mp4')) {
+      ext = 'mp4';
+    } else if (media.type === 'audio') {
+      ext = 'webm'; // Audio is usually webm
+    } else {
+      // Fallback or specific check
+      ext = 'webm';
+    }
+
+    a.download = `${media.name}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

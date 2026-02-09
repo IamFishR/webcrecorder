@@ -14,6 +14,7 @@ export interface RecordedMedia {
   createdAt: number; // Timestamp
   duration: number; // Seconds
   name: string;
+  mimeType?: string;
 }
 
 export interface MediaConstraints {
