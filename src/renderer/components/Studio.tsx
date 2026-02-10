@@ -11,6 +11,7 @@ import { formatTime } from '../utils/format';
 
 interface StudioProps {
     initialMode: RecordingType;
+    initialConstraints: MediaConstraints;
     onBack: () => void;
     onRecordingSaved: (media: RecordedMedia) => void;
     showGallery: boolean;
@@ -19,6 +20,7 @@ interface StudioProps {
 
 export const Studio: React.FC<StudioProps> = ({
     initialMode,
+    initialConstraints,
     onBack,
     onRecordingSaved,
     showGallery,
@@ -28,12 +30,13 @@ export const Studio: React.FC<StudioProps> = ({
     const [mode, setMode] = useState<RecordingType>(initialMode);
     const [isContinuous, setIsContinuous] = useState(false);
     const [pipStream, setPipStream] = useState<MediaStream | null>(null);
-    const [constraints, setConstraints] = useState<MediaConstraints>({ resolution: '1080p' });
+    const [constraints, setConstraints] = useState<MediaConstraints>(initialConstraints);
     const [showSettings, setShowSettings] = useState(false);
 
     // --- Refs ---
     const videoRef = useRef<HTMLVideoElement>(null);
     const pipVideoRef = useRef<HTMLVideoElement>(null);
+    const pipStreamRef = useRef<MediaStream | null>(null);
 
     // --- Hooks ---
     const { stream, devices, error, permissionGranted, startStream, switchCamera } =
@@ -90,6 +93,14 @@ export const Studio: React.FC<StudioProps> = ({
     useEffect(() => {
         let active = true;
 
+        const stopPip = () => {
+            if (pipStreamRef.current) {
+                pipStreamRef.current.getTracks().forEach(t => t.stop());
+                pipStreamRef.current = null;
+            }
+            if (active) setPipStream(null);
+        };
+
         if (mode === 'screen') {
             const getPip = async () => {
                 try {
@@ -97,20 +108,31 @@ export const Studio: React.FC<StudioProps> = ({
                         video: { width: 320, height: 240, facingMode: 'user' },
                         audio: false
                     });
-                    if (active) setPipStream(camStream);
+
+                    if (active) {
+                        // Stop any previous stream first
+                        if (pipStreamRef.current) {
+                            pipStreamRef.current.getTracks().forEach(t => t.stop());
+                        }
+                        pipStreamRef.current = camStream;
+                        setPipStream(camStream);
+                    } else {
+                        // Immediately stop if component unmounted or mode changed
+                        camStream.getTracks().forEach(t => t.stop());
+                    }
                 } catch (e) {
                     console.warn("Could not get PiP camera:", e);
                 }
             };
             getPip();
         } else {
-            if (pipStream) {
-                pipStream.getTracks().forEach(t => t.stop());
-                setPipStream(null);
-            }
+            stopPip();
         }
 
-        return () => { active = false; };
+        return () => {
+            active = false;
+            stopPip();
+        };
     }, [mode]);
 
     // Attach PiP stream
@@ -171,9 +193,15 @@ export const Studio: React.FC<StudioProps> = ({
                         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                             <Icons.Camera className="w-8 h-8 text-red-500" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Camera Access Required</h3>
+                        <h3 className="text-xl font-bold text-white mb-2">
+                            {error.includes('NotReadableError') || error.includes('Could not start video source')
+                                ? 'Camera In Use'
+                                : 'Camera Access Required'}
+                        </h3>
                         <p className="text-gray-400 mb-6 max-w-sm">
-                            {error}. Please check your permissions settings and try again.
+                            {error.includes('NotReadableError') || error.includes('Could not start video source')
+                                ? 'Your camera seems to be used by another application. Please close other apps and try again.'
+                                : `${error}. Please check your permissions settings and try again.`}
                         </p>
                         <button
                             onClick={() => startStream()}

@@ -1,19 +1,48 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Home } from './components/Home';
 import { Studio } from './components/Studio';
 import { Gallery } from './components/Gallery';
 import { Editor } from './components/Editor';
-import { RecordedMedia, RecordingType } from './types';
+import { SettingsPage } from './components/SettingsPage';
+import { MediaConstraints, RecordedMedia, RecordingType } from './types';
 
 const App: React.FC = () => {
     // --- State ---
-    const [view, setView] = useState<'home' | 'studio'>('home');
+    const [view, setView] = useState<'home' | 'studio' | 'settings'>('home');
     const [mode, setMode] = useState<RecordingType>('video');
     const [recordedMedia, setRecordedMedia] = useState<RecordedMedia[]>([]);
     const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
     const [showGallery, setShowGallery] = useState(false);
 
+    // Persistent Settings
+    const [mediaConstraints, setMediaConstraints] = useState<MediaConstraints>(() => {
+        const saved = localStorage.getItem('lumina_settings');
+        return saved ? JSON.parse(saved) : { resolution: '1080p' };
+    });
+
+    // --- Load existing recordings from disk on startup ---
+    useEffect(() => {
+        const loadRecordings = async () => {
+            if (window.electronAPI) {
+                try {
+                    const existing = await window.electronAPI.listRecordings();
+                    if (existing.length > 0) {
+                        setRecordedMedia(existing);
+                    }
+                } catch (err) {
+                    console.error('Failed to load recordings:', err);
+                }
+            }
+        };
+        loadRecordings();
+    }, []);
+
     // --- Handlers ---
+
+    const handleSaveSettings = (newConstraints: MediaConstraints) => {
+        setMediaConstraints(newConstraints);
+        localStorage.setItem('lumina_settings', JSON.stringify(newConstraints));
+    };
 
     const handleEnterStudio = (selectedMode: RecordingType) => {
         setMode(selectedMode);
@@ -25,7 +54,11 @@ const App: React.FC = () => {
     };
 
     const onRecordingSaved = useCallback((recording: RecordedMedia) => {
-        setRecordedMedia(prev => [recording, ...prev]);
+        setRecordedMedia(prev => {
+            // Avoid duplicates if already loaded from disk
+            const filtered = prev.filter(m => m.filePath !== recording.filePath);
+            return [recording, ...filtered];
+        });
     }, []);
 
     const deleteFile = async (filePath: string) => {
@@ -66,12 +99,22 @@ const App: React.FC = () => {
                     onOpenGallery={() => setShowGallery(true)}
                     onOpenFolder={openRecordingsFolder}
                     recordingsCount={recordedMedia.length}
+                    onOpenSettings={() => setView('settings')}
+                />
+            )}
+
+            {view === 'settings' && (
+                <SettingsPage
+                    onBack={handleBackToHome}
+                    savedConstraints={mediaConstraints}
+                    onSaveConstraints={handleSaveSettings}
                 />
             )}
 
             {view === 'studio' && (
                 <Studio
                     initialMode={mode}
+                    initialConstraints={mediaConstraints}
                     onBack={handleBackToHome}
                     onRecordingSaved={onRecordingSaved}
                     showGallery={showGallery}

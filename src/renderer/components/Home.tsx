@@ -6,13 +6,15 @@ interface HomeProps {
     onOpenGallery: () => void;
     onOpenFolder: () => void;
     recordingsCount: number;
+    onOpenSettings: () => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
     onEnterStudio,
     onOpenGallery,
     onOpenFolder,
-    recordingsCount
+    recordingsCount,
+    onOpenSettings
 }) => {
     return (
         <div className="h-full w-full overflow-y-auto bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-800/30 to-background">
@@ -91,6 +93,14 @@ export const Home: React.FC<HomeProps> = ({
                             Recordings Folder
                         </button>
                     </div>
+
+                    <button
+                        onClick={onOpenSettings}
+                        className="absolute top-6 right-6 p-3 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                        title="Settings"
+                    >
+                        <Icons.Settings className="w-6 h-6" />
+                    </button>
 
                 </div>
             </div>
